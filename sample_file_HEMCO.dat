@@ -1,0 +1,6 @@
+Target file            >>> HEMCO_Config.rc
+Delimiter              >>> :
+ ---------- DATA ----------
+ --> AEIC              >>> false
+ --> AEDT_GLOBAL       >>> true
+ --> AEDT_NA_BLOCK     >>> false

@@ -1,0 +1,5 @@
+Target file            >>> input.geos
+Delimiter              >>> :
+ ---------- DATA ----------
+ => strat. H2O?        >>> F
+ => Use non-local PBL  >>> T
