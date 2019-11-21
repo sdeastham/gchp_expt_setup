@@ -13,6 +13,7 @@ fi
 
 cd ..
 ln -s utils/setup_new_dir.py
+ln -s utils/get_n_days.py
 
 if [[ ! -d sim_settings ]]; then
    mkdir sim_settings
