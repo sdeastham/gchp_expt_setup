@@ -11,6 +11,7 @@ segment_length=15
 
 total_days=740
 n_days_run=0
+prev_seg=0
 
 if [[ $# -ge 1 ]]; then
    n_days_run=$1
@@ -21,13 +22,16 @@ if [[ $# -ge 2 ]]; then
 fi
 
 i_seg=0
+if [[ $# -ge 3 ]]; then
+   prev_seg=$3
+   i_seg=1
+fi
+
 
 if [[ $n_days_run == 0 && -e cap_restart ]]; then
    echo "Cap restart found!"
    exit 75
 fi
-
-prev_seg=0
 
 if [[ ! -L OutputDir ]]; then
    ./make_output_dir.sh
