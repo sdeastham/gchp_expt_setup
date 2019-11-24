@@ -50,7 +50,7 @@ for opts_name in ['HEMCO','GC']:
    if os.path.isfile(opt_file):
       os.symlink(opt_file,'{:s}_Options.dat'.format(opts_name))
 
-util_list = ['replace_lines.py','make_output_dir.sh','setup_multi_seg.sh','reset_dir.sh','setup_simulation_opts.sh']
+util_list = ['replace_lines.py','make_output_dir.sh','setup_multi_seg.sh','reset_dir.sh','setup_simulation_opts.sh','base_output_dir']
 for f_name in util_list:
    #shutil.copy2(os.path.join('..','utils',f_name),'.')
    os.symlink(os.path.join('..','utils',f_name),f_name)

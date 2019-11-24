@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Must be set by user
-base_dir=/n/scratchlfs/jacob_lab/seastham/GCHP/Output/Aviation_1262
+base_dir=$(<base_output_dir)
 
 # Derived automatically - do not change anything below this line
 curr_dir=$( basename $( readlink -f . ) )
