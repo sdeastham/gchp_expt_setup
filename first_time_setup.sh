@@ -57,9 +57,9 @@ while [[ $is_done -ne 1 ]]; do
       read -p "Please enter email address for slurm messaging: " user_email
       if [[ "z$user_email" == "z" ]]; then
          echo "Email disabled"
-         sed -i .bak "s/^#SBATCH --mail-user=EMAIL/#NO EMAIL/g" sample_files/ghcp.run_segment
+         sed -i.bak "s/^#SBATCH --mail-user=EMAIL/#NO EMAIL/g" sample_files/gchp.run_segment
       else
-         sed -i .bak "s/mail-user=EMAIL/mail-user=$user_email/g" sample_files/ghcp.run_segment
+         sed -i.bak "s/mail-user=EMAIL/mail-user=$user_email/g" sample_files/gchp.run_segment
       fi
       for f in GCHP.rc runConfig.sh gchp.run_segment; do
          if [[ -e ../sample_dir/$f ]]; then
