@@ -1,0 +1,177 @@
+#!/bin/bash
+
+#SBATCH -n 24
+#SBATCH -N 1
+#SBATCH --exclusive
+#SBATCH -t 1-0:00
+#SBATCH -p huce_intel
+#SBATCH --mem=MaxMemPerNode
+#SBATCH -o logs/slurm-%j.run.log
+#SBATCH --mail-type=FAIL
+#SBATCH --mail-user=EMAIL
+#SBATCH -J JOB_NAME
+
+# Resource request tips: 
+#  (1) Use #SBATCH -n 6 to request 6 cores total across all nodes
+#  (2) Use #SBATCH --exclusive to prevent other users from sharing nodes in use
+#      (ability to use --exclusive may be disabled on some clusters)
+#  (3) Use --mem=50G to request 50 Gigabytes per node, 
+#      or use --mem=MaxMemPerNode to request all memory per node
+#  (4) Performance is enhanced by requesting entire nodes and all memory
+#      even if GCHP is run on fewer cores per node than available.
+#
+# See SLURM documentation for descriptions of all possible settings.
+# Type 'man sbatch' at the command prompt to browse documentation.
+
+# Define GEOS-Chem log file
+log="gchp.log"
+
+curr_dir=$( basename $PWD )
+
+# Get the cubed sphere resolution
+# Assuming that the directory is formatted as "cNNN_...."
+old_IFS=$IFS
+IFS='_' # Underscore is set as delimiter
+read -ra ADDR <<< "$curr_dir" # str is read into an array as tokens separated by IFS
+IFS=$old_IFS # reset to default value after usage
+CS_RES=${ADDR[0]}
+if [[ "${CS_RES:0:1}" != "c" ]]; then
+   echo "First substring of directory name must be resolution, e.g. c24"
+   exit 80
+fi
+CS_RES=${CS_RES:1}
+
+# Get the other parts of the simulation directory name
+EXPT_NAME=${ADDR[1]}
+SIM_NAME=${ADDR[2]}
+
+initial_datetime=$( grep '^Start_Time' runConfig.sh | cut -d'"' -f 2 | sed 's/ /_/g' )
+
+restart_link=GEOSChem_restart_link.nc
+
+if [[ -L $restart_link ]]; then
+   unlink $restart_link
+fi
+
+if [[ -e cap_restart ]]; then
+   # Not the first run
+   ./setup_simulation_opts.sh False
+   start_datetime=$(echo $(cat cap_restart) | sed 's/ /_/g')
+   ln -s OutputDir/gcchem_internal_checkpoint.restart.${start_datetime}.nc4 $restart_link
+else
+   ./setup_simulation_opts.sh True
+   start_datetime=$initial_datetime
+   ln -s initial_GEOSChem_rst.c${CS_RES}_standard.nc $restart_link
+fi
+
+if [[ -e OutputDir/gcchem_internal_checkpoint.${initial_datetime}z.nc4 ]]; then
+   echo "Initial internal checkpoint being moved"
+   mv OutputDir/gcchem_internal_checkpoint.${initial_datetime}z.nc4 OutputDir/temp_chk.nc4
+fi
+
+# Check if the file we targeted actually exists
+if [[ ! -e $restart_link ]]; then
+   echo "Restart file missing!"
+   exit 80
+fi
+
+echo "Running a C${CS_RES} simulation"
+echo " --> Experiment name  : $EXPT_NAME"
+echo " --> Simulation       : $SIM_NAME"
+echo " --> Series start date: $initial_datetime"
+echo " --> Sim.   start date: $start_datetime"
+
+if [[ ! -f $log ]]; then
+   touch $log
+fi
+
+# Sync all config files with settings in runConfig.sh                           
+./runConfig.sh > ${log}
+if [[ $? == 0 ]]; then
+
+    # Source your environment file. This requires first setting the gchp.env
+    # symbolic link using script setEnvironment in the run directory. 
+    # Be sure gchp.env points to the same file for both compilation and 
+    # running. You can copy or adapt sample environment files located in 
+    # ./envSamples subdirectory.
+    gchp_env=$(readlink -f gchp.env)
+    if [ ! -f ${gchp_env} ] 
+    then
+       echo "ERROR: gchp.rc symbolic link is not set!"
+       echo "Copy or adapt an environment file from the ./envSamples "
+       echo "subdirectory prior to running. Then set the gchp.env "
+       echo "symbolic link to point to it using ./setEnvironment."
+       echo "Exiting."
+       exit 1
+    fi
+    echo " " >> ${log}
+    echo "WARNING: You are using environment settings in ${gchp_env}" >> ${log}
+    source ${gchp_env} >> ${log}
+
+    # Use SLURM to distribute tasks across nodes
+    NX=$( grep NX GCHP.rc | awk '{print $2}' )
+    NY=$( grep NY GCHP.rc | awk '{print $2}' )
+    coreCount=$(( ${NX} * ${NY} ))
+    planeCount=$(( ${coreCount} / ${SLURM_NNODES} ))
+    if [[ $(( ${coreCount} % ${SLURM_NNODES} )) > 0 ]]; then
+	${planeCount}=$(( ${planeCount} + 1 ))
+    fi
+
+    # Echo info from computational cores to log file for displaying results
+    echo "# of CPUs : ${coreCount}" >> ${log}
+    echo "# of nodes: ${SLURM_NNODES}" >> ${log}
+    echo "-m plane  : ${planeCount}" >> ${log}
+
+    # Optionally compile 
+    # Uncomment the line below to compile from scratch
+    # See other compile options with 'make help'
+    # make build_all
+
+    # Echo start date
+    echo ' ' >> ${log}
+    echo '===> Run started at' `date` >> ${log}
+
+    # Odyssey-specific setting to get around connection issues at high # cores
+    export OMPI_MCL_btl=openib
+
+    # Start the simulation
+    time srun -n ${coreCount} -N ${SLURM_NNODES} -m plane=${planeCount} --mpi=pmix ./geos >> ${log}
+
+    # Rename the restart (checkpoint) file for clarity and to enable reuse as
+    # a restart file. MAPL cannot read in a file with the same name as the
+    # output checkpoint filename configured in GCHP.rc.
+    if [ -f cap_restart ]; then
+       if [ ! -s cap_restart ]; then
+          # -s: file exists and is not empty
+          # So passing -f but failing -s means file is empty
+          echo "Empty cap_restart after run!"
+          exit 85
+       fi
+       restart_datetime=$(echo $(cat cap_restart) | sed 's/ /_/g')
+       if [[ "$restart_datetime" == "$start_datetime" ]]; then
+          echo "cap_restart has not advanced after run!"
+          exit 84
+       fi
+       mv OutputDir/gcchem_internal_checkpoint OutputDir/gcchem_internal_checkpoint.restart.${restart_datetime}.nc4
+       mkdir OutputDir/Output_$restart_datetime
+       mv OutputDir/GCHP* OutputDir/Output_$restart_datetime
+    else
+       echo "No cap_restart after run!"
+       exit 88
+    fi
+
+    # Echo end date
+    echo '===> Run ended at' `date` >> ${log}
+
+else
+    cat ${log}
+    echo "Failure in runConfig.sh"
+    exit 86
+fi
+
+# Clear variable
+unset log
+
+# Exit normally
+exit 0
+

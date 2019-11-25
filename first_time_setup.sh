@@ -38,6 +38,47 @@ elif [[ ! -d $( dirname $base_dir_new ) ]]; then
    exit 75
 fi
 
+# Update sample directory
+if [[ ! -d ../sample_dir/logs ]]; then
+   mkdir ../sample_dir/logs
+fi
+
+is_done=0
+while [[ $is_done -ne 1 ]]; do
+   read -p "Overwrite sample_dir files with updated versions? [y/n] " local_config
+   
+   if [[ "$local_config" == "y" ]]; then
+      echo "Overwriting sample_dir GCHP.rc, runConfig.sh, and gchp.run_segment with local copies"
+      echo "diffs for each file will be stored in setup_diffs"
+      if [[ ! -d setup_diffs ]]; then
+         mkdir setup_diffs
+      fi
+      cp sample_files/gchp.run_segment.template sample_files/gchp.run_segment
+      read -p "Please enter email address for slurm messaging: " user_email
+      if [[ "z$user_email" == "z" ]]; then
+         echo "Email disabled"
+         sed -i .bak "s/^#SBATCH --mail-user=EMAIL/#NO EMAIL/g" sample_files/ghcp.run_segment
+      else
+         sed -i .bak "s/mail-user=EMAIL/mail-user=$user_email/g" sample_files/ghcp.run_segment
+      fi
+      for f in GCHP.rc runConfig.sh gchp.run_segment; do
+         if [[ -e ../sample_dir/$f ]]; then
+            diff ../sample_dir/$f sample_files/$f > setup_diffs/${f}.diff
+            mv ../sample_dir/$f ../sample_dir/old_$f
+         else
+            echo "file not present" > setup_diffs/${f}.diff
+         fi
+         cp sample_files/$f ../sample_dir/.
+      done
+      is_done=1
+   elif [[ "$local_config" == "n" ]]; then
+      echo "Preserving sample_dir files"
+      is_done=1
+   else
+      echo "Invalid response. Must be y or n"
+   fi
+done
+
 internal_chk=$( cat ../sample_dir/GCHP.rc | grep '^GIGCchem_INTERNAL_CHECKPOINT_FILE' )
 if [[ "$internal_chk" != *"OutputDir"* ]]; then
    echo "WARNING! Internal checkpoint file does not save to output directory!"
