@@ -86,8 +86,13 @@ if [[ "$internal_chk" != *"OutputDir"* ]]; then
 fi
 
 cd ..
-ln -s utils/setup_new_dir.py
-ln -s utils/get_n_days.py
+
+for f in setup_new_dir.py get_n_days.py; do
+   if [[ -e $f ]]; then
+      unlink $f
+   fi
+   ln -s utils/$f $f
+done
 
 if [[ ! -d sim_settings ]]; then
    mkdir sim_settings
