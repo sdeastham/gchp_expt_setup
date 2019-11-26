@@ -45,7 +45,7 @@ assert (not os.path.isdir(dir_name)), 'Directory already exists'
 shutil.copytree('sample_dir',dir_name,symlinks=True)
 
 os.chdir(dir_name)
-for opts_name in ['HEMCO','GC']:
+for opts_name in ['HEMCO','GC','runConfig']:
    opt_file = os.path.join('..','sim_settings',opts_name + '_options_{:s}.dat'.format(setup_name))
    if os.path.isfile(opt_file):
       os.symlink(opt_file,'{:s}_Options.dat'.format(opts_name))

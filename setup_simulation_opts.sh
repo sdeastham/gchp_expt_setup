@@ -34,7 +34,7 @@ done
 
 if [[ "$1" == "True" ]]; then
    ../utils/make_output_dir.sh
-   for opt_file in HEMCO_Options.dat GC_Options.dat; do
+   for opt_file in HEMCO_Options.dat GC_Options.dat runConfig_Options.dat; do
       if [[ -e $opt_file ]]; then
          echo "Running setup options from $opt_file"
          ./setup_input_file.py $opt_file

@@ -1,0 +1,5 @@
+Target file            >>> runConfig.sh
+Delimiter              >>> =
+ ---------- DATA ----------
+ => Start_Time         >>> "20160701 000000"
+ => End_Time           >>> "20160701 010000"
