@@ -3,3 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 base_output_dir
+sample_files/gchp.run_segment
+sample_files/gchp.run_segment.bak
+setup_diffs/
