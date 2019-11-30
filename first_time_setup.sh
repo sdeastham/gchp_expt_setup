@@ -107,7 +107,7 @@ echo "For each different simulation at ANY resolution, you can specify "
 echo "unique settings in input.geos and in HEMCO_Config.rc in the files"
 echo "GC_options_EXPT_SIM.dat/HEMCO_options_EXPT_SIM.dat respectively. "
 echo "Meanwhile runConfig_options_EXPT_SIM.dat controls changes which  "
-echo "need to be made to runConfig.rc.
+echo "need to be made to runConfig.rc.                                 "
 echo "                                                                 "
 echo "Once this is done, you can set up a new simulation using:        "
 echo "./setup_new_dir.py cNN_EXPT_SIM                                  "
