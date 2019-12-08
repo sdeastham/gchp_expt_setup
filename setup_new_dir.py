@@ -20,6 +20,15 @@ expt_name = name_split[1]
 sim_name = name_split[2]
 setup_name = '_'.join([expt_name,sim_name])
 
+# Parse the sim name
+assert sim_name[0] == 'w', 'Simulation name must have format w[##]-[scenario], eg w10-pol3.7'
+sim_split = sim_name.split('-')
+wind_ic = int(sim_split[0][1:])
+pol_scen = sim_split[1]
+cam_met_dir = os.path.join('/net/fs10/d1/seastham/CAM_met_v2',
+                        'EPA_GEOSCHEM_IGSM-CAM_windrnd{:d}_CS3p0_Fae-0p70_Kz0p05_{:s}'.format(wind_ic,pol_scen))
+assert os.path.isdir(cam_met_dir), 'Directory {:s} not found'.format(cam_met_dir)
+
 # Default options..
 cores_per_node=24
 n_sim_days=1
@@ -70,3 +79,8 @@ replace_lines.replace_in_file('gchp.run_segment',rep_list,delim='SBATCH',comment
 
 os.system('./make_output_dir.sh')
 os.system('../utils/setup_simulation_opts.sh True')
+
+# For CAM
+if os.path.islink('MetDir_CAM'):
+   os.unlink('MetDir_CAM')
+os.symlink(cam_met_dir,'MetDir_CAM')
